@@ -388,8 +388,8 @@ PUT /produtos
       "tokenizer": {
         "meu_tokenizer_ngram": {
           "type": "ngram",
-          "min_gram": 3,
-          "max_gram": 3
+          "min_gram": 1,
+          "max_gram": 2
         }
       }
     }
