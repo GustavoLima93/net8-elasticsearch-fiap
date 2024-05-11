@@ -16,24 +16,34 @@ public class CropService
 
     private readonly IRabbitClient _client;
 
-    public CropService(IMapper mapper, IMongoRepository<Crop> crop, IRabbitClient rabbitClient)
+    private readonly IElasticCLient<CropLog> _elasticCLient;
+
+    public CropService(IMapper mapper, IMongoRepository<Crop> crop, IRabbitClient rabbitClient, IElasticCLient<CropLog> elasticCLient)
     {
         _mapper = mapper;
         _crop = crop;
         _client = rabbitClient;
+        _elasticCLient = elasticCLient;
+    }
+
+    public async Task<IReadOnlyCollection<CropLog>> GetLogs(int page, int size)
+    {
+        var documents = await this._elasticCLient.Get(page, size, "crop-log");
+        return documents;
     }
     
     public List<CropViewModel> Get() => _mapper.Map<List<CropViewModel>>(_crop.Get().ToList());
     
     public CropViewModel Get(string id) => _mapper.Map<CropViewModel>(_crop.Get(id));
 
-    public CropViewModel Create(CropViewModel crop)
+    public async Task<CropViewModel> Create(CropViewModel crop)
     {
         var entity = new Crop(crop.Name, crop.ProgramName, crop.StartTime, crop.EndTime, crop.StartSegment, crop.EndSegment);
         _crop.Create(entity);
         var message = JsonConvert.SerializeObject(entity);
         _client.SendMessage("create_crop", message);
-
+        var cropLog = new CropLog(entity.Id, entity.Name);
+        await _elasticCLient.Create(cropLog, "crop-log");
         return Get(entity.Id);
     }
 
