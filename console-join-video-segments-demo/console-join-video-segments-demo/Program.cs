@@ -10,14 +10,19 @@ var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((context, services) =>
     {
         
-        services.Configure<RabbitSettings>(context.Configuration.GetSection(nameof(RabbitSettings)));
         #region [RabbitMQ]
         services.Configure<RabbitSettings>(context.Configuration.GetSection(nameof(RabbitSettings)));
         services.AddSingleton<IRabbitSettings>(sp => sp.GetRequiredService<IOptions<RabbitSettings>>().Value);
         #endregion
+        
+        #region [ElasticSearch]
+        services.Configure<ElasticSettings>(context.Configuration.GetSection(nameof(ElasticSettings)));
+        services.AddSingleton<IElasticSettings>(sp => sp.GetRequiredService<IOptions<ElasticSettings>>().Value);
+        #endregion
 
         #region [DI]
         services.AddSingleton(typeof(IRabbitClient), typeof(RabbitClient));
+        services.AddSingleton(typeof(IElasticClient<>), typeof(ElasticClient<>));
         services.AddHostedService<JoinService>();
         #endregion
     })

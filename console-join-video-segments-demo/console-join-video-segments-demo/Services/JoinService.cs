@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using console_join_video_segments_demo.Entities;
 using console_join_video_segments_demo.Infra;
 using console_join_video_segments_demo.ViewModels;
 using Microsoft.Extensions.Hosting;
@@ -10,13 +11,15 @@ namespace console_join_video_segments_demo.Services;
 public class JoinService : IHostedService
 {
     private readonly IRabbitClient _client;
+    private readonly IElasticClient<CropLog> _elasticClient;
 
-    public JoinService(IRabbitClient client)
+    public JoinService(IRabbitClient client, IElasticClient<CropLog> elasticClient)
     {
         _client = client;
+        _elasticClient = elasticClient;
     }
     
-    private void ProcessMessage(string message)
+    private async void ProcessMessage(string message)
     {
         Console.WriteLine($"Processing message: {message}");
         CropViewModel? videoDetails = JsonConvert.DeserializeObject<CropViewModel>(message);
@@ -46,7 +49,7 @@ public class JoinService : IHostedService
             
             //-c copy -ss 00:00:{videoDetails.StartTime} -to {CalculateToTime(videoDetails.EndSegment - videoDetails.StartSegment, videoDetails.EndTime)}
 
-            ExecuteFFmpegCommand(ffmpegCommand);
+            await ExecuteFFmpegCommand(ffmpegCommand, videoDetails);
         }
     }
     
@@ -56,7 +59,7 @@ public class JoinService : IHostedService
         return TimeSpan.FromSeconds(totalDurationInSeconds - cutEndSeconds).ToString(@"hh\:mm\:ss");
     }
 
-    private static void ExecuteFFmpegCommand(string command)
+    private  async Task ExecuteFFmpegCommand(string command, CropViewModel? cropViewModel)
     {
         Process process = new Process
         {
@@ -73,20 +76,22 @@ public class JoinService : IHostedService
 
         process.Start();
         string output = process.StandardOutput.ReadToEnd();
-        string error = process.StandardError.ReadToEnd();
+        string end = process.StandardError.ReadToEnd();
         process.WaitForExit();
 
         
         if (process.ExitCode != 0) 
         {
-            Console.WriteLine("Error: " + error);
+            Console.WriteLine("Error: " + end);
+            var crop = new CropLog(cropViewModel.Id, cropViewModel.Name, end, false);
+           await _elasticClient.Create(crop, "crop-join");
         }
         else
         {
-            Console.WriteLine("FFmpeg output: " + output);
-            if (!string.IsNullOrEmpty(error))
+            if (!string.IsNullOrEmpty(end))
             {
-                Console.WriteLine("FFmpeg logs: " + error); 
+                var cropError = new CropLog(cropViewModel.Id, cropViewModel.Name, end, true);
+                await _elasticClient.Create(cropError, "crop-join");
             }
         }
     }

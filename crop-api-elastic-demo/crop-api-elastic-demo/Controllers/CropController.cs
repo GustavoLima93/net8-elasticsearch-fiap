@@ -1,5 +1,7 @@
+using crop_api_elastic_demo.Entities;
 using crop_api_elastic_demo.Services;
 using crop_api_elastic_demo.ViewModels;
+using Elastic.Clients.Elasticsearch;
 using Microsoft.AspNetCore.Mvc;
 
 namespace crop_api_elastic_demo.Controllers;
@@ -15,6 +17,13 @@ public class CropController : ControllerBase
         {
                 _logger = logger;
                 _cropService = cropService;
+        }
+
+        [HttpGet("Logs")]
+        public async Task<IReadOnlyCollection<CropLog>> Logs([FromQuery] int page, [FromQuery] int size, [FromQuery] string index)
+        { 
+                var result = await _cropService.GetLogs(page, size, index);
+                return result;
         }
         
         [HttpGet]
@@ -35,9 +44,9 @@ public class CropController : ControllerBase
         }
 
         [HttpPost]
-        public ActionResult<CropViewModel> Create(CropViewModel crop)
+        public async Task<ActionResult<CropViewModel>> Create(CropViewModel crop)
         {
-                var result = _cropService.Create(crop);
+                var result = await  _cropService.Create(crop);
                 return CreatedAtRoute("GetCrop", new { id = result.Id.ToString() }, result);
         }
 

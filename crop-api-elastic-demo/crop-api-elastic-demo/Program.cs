@@ -23,9 +23,15 @@ builder.Services.Configure<RabbitSettings>(builder.Configuration.GetSection(name
 builder.Services.AddSingleton<IRabbitSettings>(sp => sp.GetRequiredService<IOptions<RabbitSettings>>().Value);
 #endregion
 
+#region [ElasticSearch]
+builder.Services.Configure<ElasticSettings>(builder.Configuration.GetSection(nameof(ElasticSettings)));
+builder.Services.AddSingleton<IElasticSettings>(sp => sp.GetRequiredService<IOptions<ElasticSettings>>().Value);
+#endregion
+
 #region [DI]
 builder.Services.AddSingleton(typeof(IMongoRepository<>), typeof(MongoRepository<>));
 builder.Services.AddSingleton(typeof(IRabbitClient), typeof(RabbitClient));
+builder.Services.AddSingleton(typeof(IElasticClient<>), typeof(ElasticClient<>));
 builder.Services.AddSingleton<CropService>();
 #endregion
 
