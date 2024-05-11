@@ -531,8 +531,8 @@ PUT /livraria
       "tokenizer": {
         "edge_ngram_tokenizer": {
           "type": "edge_ngram",
-          "min_gram": 2,
-          "max_gram": 5
+          "min_gram": 1,
+          "max_gram": 2
         }
       }
     }
